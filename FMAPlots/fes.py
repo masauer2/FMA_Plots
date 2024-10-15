@@ -8,22 +8,28 @@ from FMAPlots.colors import Colors
 class Fes():
     def helloworld():
         print("Hello World")
-    def import_data(workingDir, subWorkingDir, fName, nReps, lim=100001):
-        reps = np.arange(0, nReps,1)
+    def import_data(workingDir, subWorkingDir, fName, nReps, replist=None, lim=100001, cols = [3,4]):
+        if replist == None:
+            reps = np.arange(0, nReps,1)
+        elif replist != None:
+            reps = np.array(replist)
+            
         nFramesPerRep = lim
         kT = 2.49
         weights = np.zeros((len(reps),nFramesPerRep))
         cv_x = np.zeros((len(reps),nFramesPerRep))
         cv_y = np.zeros((len(reps),nFramesPerRep))
+        c = 0
         for r in reps:
-            df = np.loadtxt(f"{workingDir}/{subWorkingDir}_{r}/{fName}",skiprows=1, usecols=[3,4,-1])[:nFramesPerRep]
-            cv_x[r] = df[:,0]
-            cv_y[r] = df[:,1]
-            weights[r] = np.exp(df[:,2]/kT) 
+            df = np.loadtxt(f"{workingDir}/{subWorkingDir}_{r}/{fName}",skiprows=1, usecols=[cols[0],cols[1],-1])[:nFramesPerRep]
+            cv_x[c] = df[:,0]
+            cv_y[c] = df[:,1]
+            weights[c] = np.exp(df[:,2]/kT) 
+            c = c + 1
         return cv_x, cv_y, weights
     
-    def get_histograms(cv_x, cv_y, weights, xmin, xmax, ymin, ymax):
-        histograms = [np.histogram2d(cv_x[r], cv_y[r], range=[[xmin, xmax], [ymin, ymax]], bins=[100,100], weights=weights[r]) for r in range(len(cv_x))]
+    def get_histograms(cv_x, cv_y, weights, xmin, xmax, ymin, ymax, convx, convy, binx, biny):
+        histograms = [np.histogram2d(cv_x[r]*convx, cv_y[r]*convy, range=[[xmin, xmax], [ymin, ymax]], bins=[binx,biny], weights=weights[r]) for r in range(len(cv_x))]
         return histograms
     
     def get_probability(histograms, nReps):
@@ -48,7 +54,7 @@ class Fes():
         binx = histograms[0][1]
         biny = histograms[0][2]
         fig, ax = plt.subplots(figsize=(5,5))
-        im = ax.imshow(hist, aspect=1, interpolation='nearest', origin='lower', extent=[binx[0], binx[-1], biny[0], biny[-1]],cmap=extended_cmap, vmin=0,vmax=60)
+        im = ax.imshow(hist, aspect=(binx[-1] - binx[0])/(biny[-1] - biny[0]), interpolation='nearest', origin='lower', extent=[binx[0], binx[-1], biny[0], biny[-1]],cmap=extended_cmap, vmin=0,vmax=60)
         ax.set_xlabel(f"{cv1_label}")
         ax.set_ylabel(f"{cv2_label}")
         ax.xaxis.set_major_locator(MaxNLocator(nbins=7))  # 6 total x-ticks
